@@ -2,12 +2,38 @@ var alternarColor = true;
 var continuar;
 var puntaje;
 var idRealizarMovimientosInterval;
+var movimientos;
 
 $(function () {
     setInterval(function () {
         alternarColor ? $(".main-titulo").css('color', 'white') : $(".main-titulo").css('color', 'yellow');
         alternarColor = !alternarColor;
     }, 1000);
+
+    $('.col-1').droppable({
+        accept: ".col-2"
+    });
+    $('.col-2').droppable({
+        accept: ".col-1, .col-3"
+    });
+    $('.col-3').droppable({
+        accept: ".col-2, .col-4"
+    });
+    $('.col-4').droppable({
+        accept: ".col-3, .col-5"
+    });
+    $('.col-5').droppable({
+        accept: ".col-4, .col-6"
+    });
+    $('.col-6').droppable({
+        accept: ".col-5, .col-7",
+        drop: function (event, ui) {
+            console.log($(this).attr("src"));
+        }
+    });
+    $('.col-7').droppable({
+        accept: ".col-6"
+    });
 
     $('.btn-reinicio').click(function () {
         if ($('.btn-reinicio').text() === 'Iniciar') {
@@ -29,6 +55,7 @@ $(function () {
             removerElementos();
             rellenarTablero();
             puntaje = 0;
+            movimientos = 0;
             iniciarJuego();
             $(this).text('Reiniciar');
         }
@@ -66,6 +93,8 @@ function rellenarTablero() {
 function iniciarJuego() {
     continuar = true;
 
+    droppableDraggable();
+
     $('#countdowntimer').countdowntimer({
         minutes: 2,
         seconds: 0,
@@ -99,7 +128,27 @@ function iniciarJuego() {
     idRealizarMovimientosInterval = setInterval(realizarMovimientos, 1500);
 }
 
+function actualiarNumeroMovimientos() {
+    movimientos += 1;
+
+    $('#movimientos-text').text(movimientos);
+}
+
+function intercambiarElementos(elm1, elm2) {
+    var parent1, next1,
+        parent2, next2;
+
+    parent1 = elm1.parentNode;
+    next1 = elm1.nextSibling;
+    parent2 = elm2.parentNode;
+    next2 = elm2.nextSibling;
+
+    parent1.insertBefore(elm2, next1);
+    parent2.insertBefore(elm1, next2);
+}
+
 function realizarMovimientos() {
+
     var contador;
     var nombreImagen;
     var nombreImagenSgte;
@@ -210,15 +259,49 @@ function crearDulces() {
             for (var i = 1; i <= numeroDulces; ++i) {
                 var nuevoDulce = $('<img>',
                     {"src": "image/" + (1 + Math.floor(Math.random() * 4)) + ".png", "class": "elemento"});
-                // $('.col-' + (col + 1)).prepend(nuevoDulce.delay(500).fadeOut("slow").fadeIn("slow"));
                 $('.col-' + (col + 1)).prepend(nuevoDulce);
             }
         }
     }
+
+    droppableDraggable();
 }
 
 function actualizarPuntaje(masPuntaje) {
     puntaje += masPuntaje;
 
     $('#score-text').text(puntaje);
+}
+
+function droppableDraggable() {
+    $(".elemento").draggable({
+        disabled: false,
+        cursor: "move",
+        containment: ".panel-tablero",
+        revert: true,
+        revertDuration: 500,
+        snap: ".elemento",
+        snapMode: "inner",
+        snapTolerance: 40,
+        stop: function (event, ui) {
+
+            actualiarNumeroMovimientos();
+        }
+    });
+    $(".elemento").droppable({
+        drop: function (event, ui) {
+            if (idRealizarMovimientosInterval !== 0) {
+                var dropped = ui.draggable;
+                var droppedOn = this;
+
+                var colDropped = Number($($(dropped).parent()).attr("class").substring(4, 5));
+                var colDroppedOn = Number($($(droppedOn).parent()).attr("class").substring(4, 5));
+
+                if ((Math.abs(colDropped - colDroppedOn) === 1) || colDroppedOn === colDropped) {
+                    intercambiarElementos(dropped[0], droppedOn);
+                    idRealizarMovimientosInterval = setInterval(realizarMovimientos, 1500);
+                }
+            }
+        }
+    });
 }
